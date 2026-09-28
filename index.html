@@ -1,60 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>❄️ SUnow</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            a {
-                color: blue;
-            }
-            body {
-                -webkit-user-select: none;
-                user-select: none;
-            }
-            table {
-                border:1px solid black;
-                border-collapse: collapse;
-                margin: 0 auto 0 auto;
-                min-width: fit-content;
-                -webkit-user-select: text;
-                user-select: text;
-            }
-            th {
-                text-align: left;
-            }
-            table tr:nth-child(odd) {
-                background-color: #ddd;
-            }
-            header {
-                display: block;
-                width: 100%;
-                text-align: center;
-            }
-            #list-container {
-                display: block;
-                width: 100%;
-                overflow-y: scroll;
-            }
-            .nowrap {
-                white-space: nowrap;
-            }
-        </style>
-    </head>
-    <body>
-        <header>
-            <h1>❄️ SUnow - Lectures Right Now</h1>
-            <a onclick="window.prevTimeslot()" href="#">&lt;&lt; prev</a>
-            <span id="current">Loading...</span>
-            <a onclick="window.nextTimeslot()" href="#">next &gt;&gt;</a>
-            <br>
-            <input type="checkbox" onchange="window.enableWrapChanged()" id="wrap">
-            <label for="wrap">Enable text wrapping</label>
-        </header>
-        <br>
-        <div id="list-container">
-            <table id="list" class="nowrap">
-            </table>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>❄️ SUnow</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --border-color: #d1d5db;
+            --row-odd: #f3f4f6;
+            --primary: #2563eb;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 12px;
+            background: #fff;
+            color: #111827;
+        }
+        header {
+            max-width: 800px;
+            margin: 0 auto 16px auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.25rem;
+            margin: 0 0 10px 0;
+        }
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .nav-btn {
+            background: #e5e7eb;
+            color: #111;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+        .nav-btn:hover {
+            background: #d1d5db;
+        }
+        #current {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px 12px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        .filters select, .filters input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            background: #fff;
+        }
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+        #list-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        th, td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: var(--bg-color);
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: var(--row-odd);
+        }
+        /* Mobilde tablonun devasa genişlemesini önleyen sütun kuralları */
+        .col-code {
+            width: 18%;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+        .col-where {
+            width: 18%;
+            white-space: nowrap;
+        }
+        .col-name {
+            width: 64%;
+            word-break: break-word;
+        }
+        .nowrap .col-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        @media (max-width: 600px) {
+            body { padding: 8px; }
+            th, td { padding: 6px 8px; font-size: 0.8rem; }
+            .col-code { width: 22%; }
+            .col-where { width: 22%; }
+            .col-name { width: 56%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>❄️ SUnow - Lectures Right Now</h1>
+        
+        <div class="nav-controls">
+            <a class="nav-btn" onclick="window.prevTimeslot(); return false;" href="#">&lt;&lt; Önceki</a>
+            <span id="current">Yükleniyor...</span>
+            <a class="nav-btn" onclick="window.nextTimeslot(); return false;" href="#">Sonraki &gt;&gt;</a>
         </div>
-        <script src="main.js?2"></script>
-    </body>
+
+        <div class="filters">
+            <!-- Bina Filtresi -->
+            <select id="building-filter" onchange="window.filterChanged()">
+                <option value="">Tüm Binalar</option>
+                <option value="FENS">FENS</option>
+                <option value="FASS">FASS</option>
+                <option value="FMAN">FMAN</option>
+                <option value="UC">UC</option>
+            </select>
+
+            <!-- Bölüm / Kod Arama -->
+            <input type="text" id="code-filter" placeholder="Bölüm ara (örn: CS, BIO)..." oninput="window.filterChanged()" style="width: 160px;">
+
+            <!-- Route / AL Gizleme Kutusu -->
+            <label class="filter-checkbox" title="AL 102 ve ENG derslerini gizler">
+                <input type="checkbox" id="hide-route" onchange="window.filterChanged()" checked>
+                <span>Route (AL/ENG) gizle</span>
+            </label>
+
+            <!-- Metin Kaydırma -->
+            <label class="filter-checkbox">
+                <input type="checkbox" id="wrap" onchange="window.enableWrapChanged()" checked>
+                <span>Metni kaydır</span>
+            </label>
+        </div>
+    </header>
+
+    <div id="list-container">
+        <table id="list">
+            <!-- JS ile doldurulacak -->
+        </table>
+    </div>
+
+    <script src="main.js"></script>
+</body>
 </html>
