@@ -4,6 +4,7 @@ let currentDate = null;
 const WEEKDAYS = ".MTWRF.";
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Saat dizesini gün içi dakikaya çevirir (Örn: "1:40 pm" -> 820)
 function parseTimeToMinutes(timeStr) {
     if (!timeStr) return null;
     const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
@@ -17,10 +18,11 @@ function parseTimeToMinutes(timeStr) {
     return h * 60 + m;
 }
 
+// Belirtilen dersin seçili saatte aktif olup olmadığını kontrol eder
 function getActiveSchedule(cls, date) {
     if (!Array.isArray(cls.schedule)) return null;
     const weekday = WEEKDAYS[date.getDay()];
-    const slotStartMinutes = date.getHours() * 60 + 40; // Örn. saat 10 için 10:40
+    const slotStartMinutes = date.getHours() * 60 + 40; // xx:40 başlangıcı
 
     return cls.schedule.find((sched) => {
         if (!sched?.days?.includes(weekday) || !sched?.where || !sched?.time?.from || !sched?.time?.to) {
@@ -28,26 +30,44 @@ function getActiveSchedule(cls, date) {
         }
         if (sched.where.startsWith("Altunizade Campus")) return false;
 
-        // Tarih aralığı kontrolü (Günün son milisaniyesini kapsayacak şekilde)
         const fromDate = new Date(sched.dateRange.from);
         const toDate = new Date(sched.dateRange.to);
         toDate.setHours(23, 59, 59, 999);
         if (date < fromDate || date > toDate) return false;
 
-        // Saat aralığı kontrolü: Ders slot başlangıcında aktif mi?
         const fromMin = parseTimeToMinutes(sched.time.from);
         const toMin = parseTimeToMinutes(sched.time.to);
         return fromMin <= slotStartMinutes && toMin > slotStartMinutes;
     });
 }
 
-function loadTimeSlot(date) {
-    currentDate = date;
+// Tabloyu filtreleri uygulayarak çizer
+function renderList() {
+    if (!currentDate) return;
+
+    const building = document.getElementById("building-filter")?.value || "";
+    const codeQuery = (document.getElementById("code-filter")?.value || "").trim().toUpperCase();
+    const hideRoute = document.getElementById("hide-route")?.checked ?? false;
 
     const activeClasses = [];
     for (const cls of classes) {
-        const sched = getActiveSchedule(cls, date);
+        // Route (AL veya ENG) gizleme filtresi
+        if (hideRoute && (cls.subject === "AL" || cls.subject === "ENG")) {
+            continue;
+        }
+
+        // Bölüm/Kod arama filtresi (örn: "CS", "300")
+        if (codeQuery && !cls.subject.toUpperCase().includes(codeQuery) && !`${cls.code}`.includes(codeQuery)) {
+            continue;
+        }
+
+        const sched = getActiveSchedule(cls, currentDate);
         if (sched) {
+            // Bina filtresi (FENS, FASS, FMAN, UC)
+            if (building && !sched.where.startsWith(building)) {
+                continue;
+            }
+
             activeClasses.push({
                 code: `${cls.subject} ${cls.code}${cls.type ?? ""}-${cls.section ?? "0"}`,
                 where: sched.where,
@@ -58,19 +78,42 @@ function loadTimeSlot(date) {
 
     activeClasses.sort((a, b) => a.code.localeCompare(b.code));
 
-    // Tek seferde DOM güncelleme
     const listElem = document.getElementById("list");
+    if (activeClasses.length === 0) {
+        listElem.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 24px; color: #6b7280;">Bu saat aralığında veya kriterlerde aktif ders bulunamadı.</td></tr>`;
+        return;
+    }
+
     const rowsHtml = activeClasses.map((cls) => 
-        `<tr><td>${cls.code}</td><td>${cls.where}</td><td>${cls.name}</td></tr>`
+        `<tr>
+            <td class="col-code">${cls.code}</td>
+            <td class="col-where">${cls.where}</td>
+            <td class="col-name">${cls.name}</td>
+        </tr>`
     ).join("");
 
-    listElem.innerHTML = `<tr><th style="min-width: 120px">Code</th><th style="min-width: 120px">Where</th><th>Name</th></tr>${rowsHtml}`;
+    listElem.innerHTML = `
+        <thead>
+            <tr>
+                <th class="col-code">Code</th>
+                <th class="col-where">Where</th>
+                <th class="col-name">Name</th>
+            </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+    `;
+}
 
+function loadTimeSlot(date) {
+    currentDate = date;
     const pad = (n) => n.toString().padStart(2, "0");
     const h = date.getHours();
+    
     document.getElementById("current").innerText = 
         `[${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
         `${DAY_NAMES[date.getDay()]} ${pad(h)}:40-${pad((h + 1) % 24)}:30]`;
+
+    renderList();
 }
 
 function normalizeDate(date) {
@@ -97,15 +140,26 @@ function normalizeDate(date) {
 async function loadPage() {
     const currentElem = document.getElementById("current");
     try {
+        // Orijinal canlı veri adresi
         const res = await fetch("https://omerrifat.github.io/bannerweb-fetch/dist/202601.json", { cache: "no-cache" }); //[cite: 1]
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
         classes = await res.json();
         loadTimeSlot(normalizeDate(new Date()));
     } catch (err) {
         console.error("Veri yüklenemedi:", err);
-        currentElem.innerText = "Ders verisi yüklenirken bir hata oluştu.";
+        currentElem.innerText = "Ders verisi yüklenirken hata oluştu.";
     }
 }
+
+// Buton ve input olayları (window objesine doğrudan atanır)
+window.filterChanged = function() {
+    renderList();
+};
+
+window.enableWrapChanged = function() {
+    const enabled = document.getElementById("wrap")?.checked;
+    document.getElementById("list").classList.toggle("nowrap", !enabled);
+};
 
 window.prevTimeslot = function() {
     if (!currentDate) return;
@@ -125,11 +179,6 @@ window.nextTimeslot = function() {
         if (currentDate.getDay() === 6) currentDate.setDate(currentDate.getDate() + 2);
     }
     loadTimeSlot(currentDate);
-};
-
-window.enableWrapChanged = function() {
-    const enabled = document.getElementById("wrap").checked;
-    document.getElementById("list").classList.toggle("nowrap", !enabled);
 };
 
 loadPage();
