@@ -97,7 +97,7 @@ function normalizeDate(date) {
 async function loadPage() {
     const currentElem = document.getElementById("current");
     try {
-        const res = await fetch("202601.json", { cache: "no-cache" });
+        const res = await fetch("https://omerrifat.github.io/bannerweb-fetch/dist/202601.json", { cache: "no-cache" }); //[cite: 1]
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
         classes = await res.json();
         loadTimeSlot(normalizeDate(new Date()));
