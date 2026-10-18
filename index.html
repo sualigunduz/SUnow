@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>❄️ SUnow</title>
@@ -103,7 +103,7 @@
         tr:nth-child(even) {
             background-color: var(--row-odd);
         }
-        /* Mobilde tablonun devasa genişlemesini önleyen sütun kuralları */
+        /* Mobile-friendly table column sizing */
         .col-code {
             width: 18%;
             white-space: nowrap;
@@ -137,34 +137,34 @@
         <h1>❄️ SUnow - Lectures Right Now</h1>
         
         <div class="nav-controls">
-            <a class="nav-btn" onclick="window.prevTimeslot(); return false;" href="#">&lt;&lt; Önceki</a>
-            <span id="current">Yükleniyor...</span>
-            <a class="nav-btn" onclick="window.nextTimeslot(); return false;" href="#">Sonraki &gt;&gt;</a>
+            <a class="nav-btn" onclick="window.prevTimeslot(); return false;" href="#">&lt;&lt; prev</a>
+            <span id="current">Loading...</span>
+            <a class="nav-btn" onclick="window.nextTimeslot(); return false;" href="#">next &gt;&gt;</a>
         </div>
 
         <div class="filters">
-            <!-- Bina Filtresi -->
+            <!-- Building Filter -->
             <select id="building-filter" onchange="window.filterChanged()">
-                <option value="">Tüm Binalar</option>
+                <option value="">All Buildings</option>
                 <option value="FENS">FENS</option>
                 <option value="FASS">FASS</option>
                 <option value="FMAN">FMAN</option>
                 <option value="UC">UC</option>
             </select>
 
-            <!-- Bölüm / Kod Arama -->
-            <input type="text" id="code-filter" placeholder="Bölüm ara (örn: CS, BIO)..." oninput="window.filterChanged()" style="width: 160px;">
+            <!-- Subject / Code Search -->
+            <input type="text" id="code-filter" placeholder="Search code (e.g. CS, BIO)..." oninput="window.filterChanged()" style="width: 180px;">
 
-            <!-- Route / AL Gizleme Kutusu -->
-            <label class="filter-checkbox" title="AL 102 ve ENG derslerini gizler">
+            <!-- Hide Route / AL Courses Checkbox -->
+            <label class="filter-checkbox" title="Hide AL 102 and ENG courses">
                 <input type="checkbox" id="hide-route" onchange="window.filterChanged()" checked>
-                <span>Route (AL/ENG) gizle</span>
+                <span>Hide Route (AL/ENG)</span>
             </label>
 
-            <!-- Metin Kaydırma -->
+            <!-- Text Wrapping Checkbox -->
             <label class="filter-checkbox">
                 <input type="checkbox" id="wrap" onchange="window.enableWrapChanged()" checked>
-                <span>Metni kaydır</span>
+                <span>Enable text wrapping</span>
             </label>
         </div>
     </header>

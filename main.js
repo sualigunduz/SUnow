@@ -4,7 +4,7 @@ let currentDate = null;
 const WEEKDAYS = ".MTWRF.";
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// Saat dizesini gün içi dakikaya çevirir (Örn: "1:40 pm" -> 820)
+// Converts a time string to minutes from start of day (e.g., "1:40 pm" -> 820)
 function parseTimeToMinutes(timeStr) {
     if (!timeStr) return null;
     const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
@@ -18,11 +18,11 @@ function parseTimeToMinutes(timeStr) {
     return h * 60 + m;
 }
 
-// Belirtilen dersin seçili saatte aktif olup olmadığını kontrol eder
+// Checks if the given class has an active scheduled session at the specified time slot
 function getActiveSchedule(cls, date) {
     if (!Array.isArray(cls.schedule)) return null;
     const weekday = WEEKDAYS[date.getDay()];
-    const slotStartMinutes = date.getHours() * 60 + 40; // xx:40 başlangıcı
+    const slotStartMinutes = date.getHours() * 60 + 40; // xx:40 slot start
 
     return cls.schedule.find((sched) => {
         if (!sched?.days?.includes(weekday) || !sched?.where || !sched?.time?.from || !sched?.time?.to) {
@@ -41,7 +41,7 @@ function getActiveSchedule(cls, date) {
     });
 }
 
-// Tabloyu filtreleri uygulayarak çizer
+// Renders the table applying current active filters
 function renderList() {
     if (!currentDate) return;
 
@@ -51,19 +51,19 @@ function renderList() {
 
     const activeClasses = [];
     for (const cls of classes) {
-        // Route (AL veya ENG) gizleme filtresi
+        // Filter out Route (AL or ENG) courses
         if (hideRoute && (cls.subject === "AL" || cls.subject === "ENG")) {
             continue;
         }
 
-        // Bölüm/Kod arama filtresi (örn: "CS", "300")
+        // Subject / course code query filter (e.g. "CS", "300")
         if (codeQuery && !cls.subject.toUpperCase().includes(codeQuery) && !`${cls.code}`.includes(codeQuery)) {
             continue;
         }
 
         const sched = getActiveSchedule(cls, currentDate);
         if (sched) {
-            // Bina filtresi (FENS, FASS, FMAN, UC)
+            // Building filter (FENS, FASS, FMAN, UC)
             if (building && !sched.where.startsWith(building)) {
                 continue;
             }
@@ -80,7 +80,7 @@ function renderList() {
 
     const listElem = document.getElementById("list");
     if (activeClasses.length === 0) {
-        listElem.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 24px; color: #6b7280;">Bu saat aralığında veya kriterlerde aktif ders bulunamadı.</td></tr>`;
+        listElem.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 24px; color: #6b7280;">No active classes found for this time slot or matching the filters.</td></tr>`;
         return;
     }
 
@@ -122,10 +122,10 @@ function normalizeDate(date) {
         d.setDate(d.getDate() + 1);
         d.setHours(8);
     }
-    if (d.getDay() === 6) { // Cumartesi -> Pazartesi
+    if (d.getDay() === 6) { // Saturday -> Monday
         d.setDate(d.getDate() + 2);
         d.setHours(8);
-    } else if (d.getDay() === 0) { // Pazar -> Pazartesi
+    } else if (d.getDay() === 0) { // Sunday -> Monday
         d.setDate(d.getDate() + 1);
         d.setHours(8);
     } else if (d.getMinutes() < 30) {
@@ -140,18 +140,18 @@ function normalizeDate(date) {
 async function loadPage() {
     const currentElem = document.getElementById("current");
     try {
-        // Orijinal canlı veri adresi
-        const res = await fetch("https://omerrifat.github.io/bannerweb-fetch/dist/202601.json", { cache: "no-cache" }); //[cite: 1]
+        // Original live data source
+        const res = await fetch("https://omerrifat.github.io/bannerweb-fetch/dist/202601.json", { cache: "no-cache" });
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
         classes = await res.json();
         loadTimeSlot(normalizeDate(new Date()));
     } catch (err) {
-        console.error("Veri yüklenemedi:", err);
-        currentElem.innerText = "Ders verisi yüklenirken hata oluştu.";
+        console.error("Failed to load course data:", err);
+        currentElem.innerText = "Error loading course data.";
     }
 }
 
-// Buton ve input olayları (window objesine doğrudan atanır)
+// Button and input event handlers (bound to window)
 window.filterChanged = function() {
     renderList();
 };
