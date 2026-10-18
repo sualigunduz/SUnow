@@ -57,22 +57,29 @@
         .filters {
             display: flex;
             flex-wrap: wrap;
+            align-items: center;
             justify-content: center;
-            gap: 8px 12px;
+            gap: 8px 10px;
             font-size: 0.85rem;
             margin-top: 8px;
         }
         .filters select, .filters input[type="text"] {
-            padding: 4px 8px;
+            padding: 5px 8px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.85rem;
             background: #fff;
+            color: #111827;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .filters select:focus, .filters input[type="text"]:focus {
+            border-color: var(--primary);
         }
         .filter-checkbox {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             cursor: pointer;
             user-select: none;
         }
@@ -144,7 +151,7 @@
 
         <div class="filters">
             <!-- Building Filter -->
-            <select id="building-filter" onchange="window.filterChanged()">
+            <select id="building-filter" onchange="window.buildingChanged()">
                 <option value="">All Buildings</option>
                 <option value="FENS">FENS</option>
                 <option value="FASS">FASS</option>
@@ -152,13 +159,23 @@
                 <option value="UC">UC</option>
             </select>
 
-            <!-- Subject / Code Search -->
-            <input type="text" id="code-filter" placeholder="Search code (e.g. CS, BIO)..." oninput="window.filterChanged()" style="width: 180px;">
+            <!-- Floor Filter -->
+            <select id="floor-filter" onchange="window.filterChanged()">
+                <option value="">All Floors</option>
+                <option value="L">L</option>
+                <option value="G">G</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="0">0</option>
+            </select>
 
-            <!-- Hide Route / AL Courses Checkbox -->
-            <label class="filter-checkbox" title="Hide AL 102 and ENG courses">
+            <!-- Subject / Code Search -->
+            <input type="text" id="code-filter" placeholder="Search code (e.g. CS 300)..." oninput="window.filterChanged()" style="width: 170px;">
+
+            <!-- Hide Route Courses Checkbox -->
+            <label class="filter-checkbox" title="Hide English Route preparatory courses">
                 <input type="checkbox" id="hide-route" onchange="window.filterChanged()" checked>
-                <span>Hide Route (AL/ENG)</span>
+                <span>Hide English Route</span>
             </label>
 
             <!-- Text Wrapping Checkbox -->

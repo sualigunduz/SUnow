@@ -41,24 +41,81 @@ function getActiveSchedule(cls, date) {
     });
 }
 
+const BUILDING_FLOORS = {
+    "": ["L", "G", "1", "2", "0"],
+    "FENS": ["L", "G", "1", "2"],
+    "FASS": ["G", "1", "2"],
+    "FMAN": ["L", "G", "0"],
+    "UC": ["G"]
+};
+
+// Determines the floor identifier(s) for a given room location string
+function getFloorsForLocation(where) {
+    if (!where) return [];
+    const parts = where.trim().split(/\s+/);
+    const building = parts[0];
+    const room = parts.slice(1).join(" ");
+    if (!room) return [];
+
+    // FMAN room aliases: G077 is also known as 1099, matching G, 0, or 1
+    if (building === "FMAN" && (room.includes("G077") || room.includes("1099"))) {
+        return ["G", "0", "1"];
+    }
+
+    const firstChar = room.charAt(0).toUpperCase();
+    if (["L", "G", "0", "1", "2"].includes(firstChar)) {
+        return [firstChar];
+    }
+    return [];
+}
+
+// Checks if a class is an English Route preparatory course (keeps AL and higher ENG intact)
+function isEnglishRouteCourse(cls) {
+    if (cls.subject !== "ENG") return false;
+    const codeStr = String(cls.code ?? "").trim();
+    if (/^(0|1|2|3|4|01|02|03|04|001|002|003|004|0001|0002|0003|0004)$/.test(codeStr)) {
+        return true;
+    }
+    if (cls.name && cls.name.toLowerCase().includes("route")) {
+        return true;
+    }
+    return false;
+}
+
 // Renders the table applying current active filters
 function renderList() {
     if (!currentDate) return;
 
     const building = document.getElementById("building-filter")?.value || "";
-    const codeQuery = (document.getElementById("code-filter")?.value || "").trim().toUpperCase();
+    const selectedFloor = document.getElementById("floor-filter")?.value || "";
+    const rawQuery = (document.getElementById("code-filter")?.value || "").trim().toUpperCase();
+    const queryNormalized = rawQuery.replace(/\s+/g, "");
     const hideRoute = document.getElementById("hide-route")?.checked ?? false;
 
     const activeClasses = [];
     for (const cls of classes) {
-        // Filter out Route (AL or ENG) courses
-        if (hideRoute && (cls.subject === "AL" || cls.subject === "ENG")) {
+        // Hide English Route preparatory courses only (AL is not hidden)
+        if (hideRoute && isEnglishRouteCourse(cls)) {
             continue;
         }
 
-        // Subject / course code query filter (e.g. "CS", "300")
-        if (codeQuery && !cls.subject.toUpperCase().includes(codeQuery) && !`${cls.code}`.includes(codeQuery)) {
-            continue;
+        // Subject / course code query filter (e.g., "CS", "300", "CS 300", "CS300")
+        if (rawQuery) {
+            const subject = (cls.subject || "").toUpperCase();
+            const code = String(cls.code ?? "").toUpperCase();
+            const fullCode = `${subject} ${code}`;
+            const fullCodeNoSpace = `${subject}${code}`;
+            const name = (cls.name || "").toUpperCase();
+
+            const matchesQuery = fullCode.includes(rawQuery) ||
+                fullCodeNoSpace.includes(queryNormalized) ||
+                code.includes(rawQuery) ||
+                subject.includes(rawQuery) ||
+                name.includes(rawQuery);
+
+            if (!matchesQuery) {
+                continue;
+            }
         }
 
         const sched = getActiveSchedule(cls, currentDate);
@@ -66,6 +123,14 @@ function renderList() {
             // Building filter (FENS, FASS, FMAN, UC)
             if (building && !sched.where.startsWith(building)) {
                 continue;
+            }
+
+            // Floor filter (L, G, 1, 2, 0)
+            if (selectedFloor) {
+                const roomFloors = getFloorsForLocation(sched.where);
+                if (!roomFloors.includes(selectedFloor)) {
+                    continue;
+                }
             }
 
             activeClasses.push({
@@ -102,6 +167,26 @@ function renderList() {
         </thead>
         <tbody>${rowsHtml}</tbody>
     `;
+}
+
+function updateFloorOptions(building) {
+    const floorSelect = document.getElementById("floor-filter");
+    if (!floorSelect) return;
+
+    const currentVal = floorSelect.value;
+    const availableFloors = BUILDING_FLOORS[building] || BUILDING_FLOORS[""];
+
+    let optionsHtml = `<option value="">All Floors</option>`;
+    for (const f of availableFloors) {
+        optionsHtml += `<option value="${f}">${f}</option>`;
+    }
+    floorSelect.innerHTML = optionsHtml;
+
+    if (availableFloors.includes(currentVal)) {
+        floorSelect.value = currentVal;
+    } else {
+        floorSelect.value = "";
+    }
 }
 
 function loadTimeSlot(date) {
@@ -152,6 +237,12 @@ async function loadPage() {
 }
 
 // Button and input event handlers (bound to window)
+window.buildingChanged = function() {
+    const building = document.getElementById("building-filter")?.value || "";
+    updateFloorOptions(building);
+    renderList();
+};
+
 window.filterChanged = function() {
     renderList();
 };
